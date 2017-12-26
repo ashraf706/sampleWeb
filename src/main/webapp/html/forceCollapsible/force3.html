@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Final</title>
+    <script type="text/javascript" src="../../js/d3.js"></script>
+    <style>
+
+        .links line {
+            stroke: #999;
+            stroke-opacity: 0.6;
+        }
+
+        .nodes circle {
+            cursor: pointer;
+            stroke: #000;
+            stroke-width: 0.5;
+        }
+
+        .svg-container {
+            display: inline-block;
+            position: relative;
+            width: 100%;
+            padding-bottom: 100%; /* aspect ratio */
+            vertical-align: top;
+            overflow: hidden;
+        }
+
+        .svg-content-responsive {
+            display: inline-block;
+            position: absolute;
+            top: 10px;
+            left: 0;
+        }
+
+    </style>
+</head>
+<body>
+<div class="svg-container">
+    <svg width="1200" height="700" viewBox="0 0 1400 900">
+        <g class="links"></g>
+        <g class="nodes"></g>
+        <g class="texts"></g>
+    </svg>
+</div>
+
+<script>
+    var root,
+        nodes,
+        links,
+        linkElementsGroup,
+        linkElements,
+        nodeElementsGroup,
+        circleElements,
+        nodeText;
+
+    var svg = d3.select("svg"),
+        width = +svg.attr("width"),
+        height = +svg.attr("height");
+
+    var svgNode = d3.select("g.nodes");
+    var svgLink = d3.select("g.links");
+    var svgTexts = d3.select("g.texts");
+
+    var simulation = d3.forceSimulation()
+        .force("link", d3.forceLink().id(function (d) {
+            return d.id;
+        }))
+        .force("charge", d3.forceManyBody().strength(-100))
+        .force("center", d3.forceCenter(width / 2, height / 2))
+        .force("collide", d3.forceCollide(15))
+        .force("forceX", d3.forceX().strength(.1).x(width / 2))
+        .force("forceY", d3.forceY().strength(.1).y(height / 2));
+
+    d3.json("flare3.json", function (error, graph) {
+
+        if (error) throw error;
+
+        root = d3.hierarchy(graph);
+        /*root.fixed = false;
+        root.x = width / 2;
+        root.y = height / 2;*/
+
+
+        update();
+
+        simulation
+            .nodes(nodes)
+            .on("tick", ticked)
+            .force("link")
+            .links(links);
+
+
+    });
+
+    function update() {
+
+        nodes = root.descendants();
+        links = root.links();
+
+        //update link
+        linkElementsGroup = svgLink
+            .selectAll("g.link-group")
+            .data(links, function (d) {
+                return d.id;
+            });
+
+
+        //add new link
+        linkElements = linkElementsGroup
+            .enter()
+            .append("g")
+            .attr("class", "link-group")
+            .append("line")
+            .attr("stroke-width", 2);
+
+        //remove link
+        linkElementsGroup.exit().remove();
+
+
+        // Update the nodes group…
+        nodeElementsGroup = svgNode
+            .selectAll("g.circle-group")
+            .data(nodes, function (d) {
+                return d.id;
+            });
+
+
+        // Enter any new nodes.
+        circleElements = nodeElementsGroup.enter().append("g")
+            .attr("class", "circle-group")
+            .append("circle")
+            .attr("fill", color)
+            .attr("caption", caption)
+            .on("click", handleClick)
+            .call(
+                d3.drag()
+                    .on("start", dragStarted)
+                    .on("drag", dragged)
+                    .on("end", dragEnded)
+            );
+
+        // Exit any old nodes.
+        nodeElementsGroup.exit().remove();
+
+        nodeText = svgTexts.selectAll("text")
+            .data(nodes)
+            .enter()
+            .append("text")
+            .attr("class", "page-heading")
+            .attr("id", function (d) {
+                return d.data.name;
+            })
+            .text(function (d) {
+                return d.data.name;
+            });
+
+    }
+
+    function ticked() {
+        console.log("ticking.....");
+        linkElements
+            .attr("x1", function (d) {
+                return d.source.x;
+            })
+            .attr("y1", function (d) {
+                return d.source.y;
+            })
+            .attr("x2", function (d) {
+                return d.target.x;
+            })
+            .attr("y2", function (d) {
+                return d.target.y;
+            });
+
+        circleElements
+            .attr("r", function (d) {
+                var minR = 5,
+                    multiplier = 1.5,
+                    depth = d.depth + 1;
+
+                var r = depth > minR ? minR : (minR + depth);
+
+                return r * multiplier;
+            })
+            .attr("cx", function (d) {
+                return d.x;
+            })
+            .attr("cy", function (d) {
+                return d.y;
+            });
+
+        nodeText
+            .attr("dx", function (d) {
+                return d.x
+            })
+            .attr("dy", function (d) {
+                return d.y;
+            })
+    }
+
+    // Color leaf nodes orange, and packages white or blue.
+    function color(d) {
+        return d._children ? "#3bbd37" : d.children ? "#c6dbef" : "#fd8d3c";
+    }
+
+    function caption(d) {
+        return d.data.name;
+    }
+
+    function handleClick(d) {
+        /*if (d.children) {
+            d._children = d.children;
+            recursiveShowHideText(d, 0);
+            d.children = null;
+        } else {
+            d.children = d._children;
+            recursiveShowHideText(d, 1);
+            d._children = null;
+        }*/
+
+        update();
+
+    }
+
+    function recursiveShowHideText(d, opacity){
+        if(!d.children) return;
+
+        d3.selectAll(d.children).each(function () {
+            recursiveShowHideText(this, opacity);
+            var textId = "#" + this.data.name;
+            d3.selectAll(textId).style("opacity", opacity);
+        });
+
+    }
+
+    function dragStarted(d) {
+        if (!d3.event.active) {
+            simulation.alphaTarget(0.3).restart();
+        }
+        d.fx = d.x;
+        d.fy = d.y;
+    }
+
+    function dragged(d) {
+        d.fx = d3.event.x;
+        d.fy = d3.event.y;
+    }
+
+    function dragEnded(d) {
+        console.log("drag ended");
+        if (!d3.event.active) {
+            simulation.alphaTarget(0);
+        }
+       d.fx = null;
+       d.fy = null;
+    }
+</script>
+</body>
+</html>

@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>4</title>
+    <script type="text/javascript" src="../../js/d3.js"></script>
+
+    <style>
+
+        .links line {
+            stroke: #999;
+            stroke-opacity: 0.6;
+        }
+
+        .nodes circle {
+            cursor: pointer;
+            stroke: #000;
+            stroke-width: 0.5;
+        }
+
+    </style>
+</head>
+<body>
+<div class="svg-container">
+    <svg width="1200" height="700" viewBox="0 0 1400 900">
+    </svg>
+</div>
+<script>
+    var root,
+        nodes,
+        links,
+        nodeData,
+        linkData,
+        linkEnter,
+        nodeLabel,
+        nodeCircle,
+        nodeRect,
+        allNodes,
+        allLinks;
+
+    var svg = d3.select("svg"),
+        width = +svg.attr("width"),
+        height = +svg.attr("height");
+
+    var linkGroup = svg.append("g")
+        .attr("id", "linkGroup")
+        .attr("class", "links");
+
+    var nodeGroup = svg.append("g")
+        .attr("id", "nodeGroup")
+        .attr("class", "nodes");
+
+    var simulation = d3.forceSimulation()
+        .force("link", d3.forceLink().id(function (d) {
+            return d.id;
+        }))
+        .force("charge", d3.forceManyBody().strength(-1400))
+        .force("center", d3.forceCenter(width / 2, height / 2))
+        .force("collide", d3.forceCollide(15))
+        .force("forceX", d3.forceX().strength(.1).x(width / 2))
+        .force("forceY", d3.forceY().strength(.1).y(height / 2));
+
+    d3.json("flare3.json", function (error, graph) {
+
+        if (error) throw error;
+        root = d3.hierarchy(graph);
+
+        update();
+
+
+    });
+
+    function update() {
+        nodes = root.descendants();
+        links = root.links();
+
+        var drag = d3.drag()
+            .on("start", dragStarted)
+            .on("drag", dragged)
+            .on("end", dragEnded);
+
+        nodeData = nodeGroup.selectAll("g")
+            .data(nodes, function (d) {
+                return d.id;
+            });
+
+        var nodeExit = nodeData
+            .exit()
+            .remove();
+
+        var nodeEnter = nodeData
+            .enter()
+            .append("g")
+            .attr("id", function (d) {
+                return d.id;
+            })
+
+            .call(drag);
+
+        nodeCircle = nodeEnter
+            .append("circle")
+            .attr("fill", color)
+            .on("click", handleClick)
+            .attr("caption", caption);
+
+        nodeRect = nodeEnter
+            .append("rect")
+            .attr("fill", color)
+            .on("click", handleClick)
+            .attr("caption", caption);
+
+        nodeLabel = nodeEnter
+            .append("text")
+            .attr("id", function (d) {
+                return d.data.name;
+            })
+            .text(function (d) {
+                return d.data.name;
+            });
+
+        allNodes = nodeEnter.merge(nodeData);
+
+        linkData = linkGroup.selectAll("line")
+            .data(links, function (d) {
+                return d.target.id;
+            });
+
+        linkEnter = linkData
+            .enter()
+            .append("line")
+            .attr("stroke-width", 2);
+
+
+        var linkExit = linkData
+            .exit()
+            .remove();
+
+        allLinks = linkEnter.merge(linkData);
+
+        simulation
+            .nodes(nodes)
+            .on("tick", ticked);
+
+        simulation
+            .force("link")
+            .links(links);
+
+    }
+
+    function ticked() {
+        allLinks
+            .attr("x1", function (d) {
+                return d.source.x;
+            })
+            .attr("y1", function (d) {
+                return d.source.y;
+            })
+            .attr("x2", function (d) {
+                return d.target.x;
+            })
+            .attr("y2", function (d) {
+                return d.target.y;
+            });
+
+        allNodes.selectAll("circle")
+            .attr("r", function (d) {
+                var minR = 5,
+                    multiplier = 1.5,
+                    depth = d.depth + 1;
+
+                var r = depth > minR ? minR : (minR + depth);
+
+                return r * multiplier;
+            })
+            .attr("cx", function (d) {
+                return d.x;
+            })
+            .attr("cy", function (d) {
+                return d.y;
+            });
+
+
+        allNodes.selectAll("text")
+            .attr("dx", function (d) {
+                return d.x
+            })
+            .attr("dy", function (d) {
+                return d.y;
+            })
+    }
+
+    function handleClick(d) {
+        if (d.children) {
+            d._children = d.children;
+            recursiveShowHideText(d, 0);
+            d.children = null;
+        } else {
+            d.children = d._children;
+            recursiveShowHideText(d, 1);
+            d._children = null;
+        }
+
+        update();
+
+    }
+
+    function color(d) {
+        return d._children ? "#3bbd37" : d.children ? "#c6dbef" : "#fd8d3c";
+    }
+
+    function caption(d) {
+        return d.data.name;
+    }
+
+    function dragStarted(d) {
+        if (!d3.event.active) {
+            simulation.alphaTarget(0.3).restart();
+        }
+        d.fx = d.x;
+        d.fy = d.y;
+    }
+
+    function dragged(d) {
+        d.fx = d3.event.x;
+        d.fy = d3.event.y;
+    }
+
+    function dragEnded(d) {
+        if (!d3.event.active) {
+            simulation.alphaTarget(0);
+        }
+        d.fx = null;
+        d.fy = null;
+    }
+
+    function recursiveShowHideText(d, opacity) {
+        if (!d.children) return;
+
+        d3.selectAll(d.children).each(function () {
+            recursiveShowHideText(this, opacity);
+            var textId = "#" + this.data.name;
+            d3.selectAll(textId).style("opacity", opacity);
+        });
+
+    }
+</script>
+</body>
+</html>

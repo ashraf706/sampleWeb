@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Pattern</title>
+    <style>
+        .rect-asthetics {
+            stroke: #19ff1a;
+            stroke-width: 1;
+        }
+
+        .color-change-3x {
+            animation: color-change-3x 4s linear infinite alternate both;
+            animation-delay: 0.3s;
+        }
+
+        @keyframes color-change-3x {
+            0% {
+                fill: #19dcea;
+            }
+            50% {
+                fill: #b22cff;
+            }
+            100% {
+                fill: #ea2222;
+            }
+        }
+
+
+        .rect{
+            transform-origin:50% 50%;
+            -moz-transform-origin:50% 50%;
+            animation: flip_right 5s infinite none;
+            animation-delay: 2s;
+        }
+
+        @keyframes flip_right {
+            0% {transform: perspective(2000px) rotateY(10deg) skewY(-3.5deg)}
+            30% {transform:perspective(2000px) rotateY(-20deg) skewY(-0.8deg)}
+            50% {transform:perspective(2000px) rotateY(20deg) skewY(0.8deg)}
+            70% {transform:perspective(2000px) rotateY(-10deg) skewY(-0.8deg)}
+            100% {transform:perspective(2000px) rotateY(0deg)}
+        }
+
+
+        .tracking-in-expand {
+            animation: tracking-in-expand 2s  both infinite;
+        }
+
+        @keyframes tracking-in-expand {
+            0% {
+                letter-spacing: -0.5em;
+                opacity: 0;
+            }
+            40% {
+                opacity: 0.6;
+            }
+            100% {
+                opacity: 1;
+            }
+        }
+
+    </style>
+</head>
+<body>
+    <svg width="334" , height="600">
+        <defs>
+            <linearGradient id="Gradient1" x2="0%" y2="100%">
+                <stop offset="0%" stop-color="#bba8f4" />
+                <stop offset="20%" stop-color="#a595d8" />
+                <stop offset="40%" stop-color="#8979ba" />
+                <stop offset="60%" stop-color="#7363a5" />
+                <stop offset="80%" stop-color="#605091" />
+                <stop offset="100%" stop-color="#3e3168" />
+            </linearGradient>
+        </defs>
+
+        <rect width="330" height="600" stroke="blue" fill="white" class="color-change-3x"/>
+
+        <rect class="rect" x="1" y="1" width="80" height="80" rx="5" class="rect-asthetics" fill="url(#Gradient1)" />
+        <rect class="rect" x="82" y="1" width="80" height="80" rx="5" class="rect-asthetics" fill="url(#Gradient1)"/>
+        <rect class="rect" x="161" y="1" width="80" height="80" rx="5" class="rect-asthetics" fill="url(#Gradient1)"/>
+        <rect class="rect" x="241" y="1" width="80" height="80" rx="5" class="rect-asthetics" fill="url(#Gradient1)"/>
+
+        <rect class="rect" x="1" y="82" width="80" height="80" rx="5" class="rect-asthetics" fill="url(#Gradient1)"/>
+        <rect class="rect" x="82" y="82" width="80" height="80" rx="5" class="rect-asthetics" fill="url(#Gradient1)"/>
+        <rect class="rect" x="161" y="82" width="80" height="80" rx="5" class="rect-asthetics" fill="url(#Gradient1)"/>
+        <rect class="rect" x="241" y="82" width="80" height="80" rx="5" class="rect-asthetics" fill="url(#Gradient1)"/>
+
+        <text class="tracking-in-expand" x="0" y="15" fill="red">Hello world</text>
+    </svg>
+</body>
+</html>

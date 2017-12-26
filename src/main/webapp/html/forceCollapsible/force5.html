@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>5</title>
+    <script type="text/javascript" src="../../js/d3.js"></script>
+
+    <style>
+
+        .links line {
+            stroke: #999;
+            stroke-opacity: 0.6;
+        }
+
+        .nodes circle {
+            cursor: pointer;
+            stroke: #000;
+            stroke-width: 0.5;
+        }
+
+    </style>
+</head>
+<body>
+<div class="svg-container">
+    <svg width="1200" height="700" viewBox="0 0 1400 900">
+    </svg>
+</div>
+<script>
+    var root,
+        nodes,
+        links,
+        nodeData,
+        rectNodeData,
+        circleNodeData,
+        linkData,
+        linkEnter,
+        nodeLabel,
+        nodeCircle,
+        nodeRect,
+        allNodes,
+        allCircleNodes,
+        allRectNodes,
+        allLinks;
+
+    var svg = d3.select("svg"),
+        width = +svg.attr("width"),
+        height = +svg.attr("height");
+
+    var linkGroup = svg.append("g")
+        .attr("id", "linkGroup")
+        .attr("class", "links");
+
+    var nodeGroup = svg.append("g")
+        .attr("id", "nodeGroup")
+        .attr("class", "nodes");
+
+    var simulation = d3.forceSimulation()
+        .force("link", d3.forceLink().id(function (d) {
+            return d.id;
+        }))
+        .force("charge", d3.forceManyBody().strength(-1400))
+        .force("center", d3.forceCenter(width / 2, height / 2))
+        .force("collide", d3.forceCollide(15))
+        .force("forceX", d3.forceX().strength(.1).x(width / 2))
+        .force("forceY", d3.forceY().strength(.1).y(height / 2));
+
+    d3.json("flare5.json", function (error, graph) {
+
+        if (error) throw error;
+        root = d3.hierarchy(graph);
+
+        update();
+
+
+    });
+
+    function update() {
+        nodes = root.descendants();
+        links = root.links();
+
+        var drag = d3.drag()
+            .on("start", dragStarted)
+            .on("drag", dragged)
+            .on("end", dragEnded);
+
+
+        var parentNodeData = nodes.filter(function (d) {
+            if (d.depth == 0) {
+                return d;
+            }
+        });
+
+        var leafNodeD   ata = nodes.filter(function (d) {
+            if (d.depth != 0) {
+                return d;
+            }
+        });
+        /*nodeData = nodeGroup.selectAll("g")
+            .data(nodes, function (d) {
+                return d.id;
+            });*/
+
+        circleNodeData = nodeGroup.selectAll("g.circle")
+            .data(parentNodeData, function (d) {
+                return d.id;
+            });
+
+        rectNodeData = nodeGroup.selectAll("g.rect")
+            .data(leafNodeData, function (d) {
+                return d.id;
+            });
+
+        /*var nodeExit = nodeData
+            .exit()
+            .remove();*/
+
+        var circleNodeExit = circleNodeData
+            .exit()
+            .remove();
+
+        var rectNodeExit = rectNodeData
+            .exit()
+            .remove();
+
+        //Creating circle
+        var circleNodeEnter = circleNodeData
+            .enter()
+            .append("g")
+            .attr("class", "circle")
+            .attr("id", function (d) {
+                return d.id;
+            })
+            .call(drag);
+
+        nodeCircle = circleNodeEnter
+            .append("circle")
+            .attr("fill", color)
+            .on("click", handleClick)
+            .attr("caption", caption);
+
+
+        nodeLabel = circleNodeEnter
+            .append("text")
+            .attr("id", function (d) {
+                return d.data.name;
+            })
+            .text(function (d) {
+                return d.data.name;
+            });
+
+        //=================================================
+
+        //Creating rectangle
+
+        var rectNodeEnter = rectNodeData
+            .enter()
+            .append("g")
+            .attr("class", "rect")
+            .attr("id", function (d) {
+                return d.id;
+            })
+            .call(drag);
+
+        nodeRect = rectNodeEnter
+            .append("rect")
+            .attr("fill", color)
+            .on("click", handleClick)
+            .attr("caption", caption);
+
+        nodeLabel = rectNodeEnter
+            .append("text")
+            .attr("id", function (d) {
+                return d.data.name;
+            })
+            .text(function (d) {
+                return d.data.name;
+            });
+
+        //=================================================
+
+        allCircleNodes = circleNodeEnter.merge(circleNodeData);
+        allRectNodes = rectNodeEnter.merge(rectNodeData);
+
+        linkData = linkGroup.selectAll("line")
+            .data(links, function (d) {
+                return d.target.id;
+            });
+
+        linkEnter = linkData
+            .enter()
+            .append("line")
+            .attr("stroke-width", 2);
+
+
+        var linkExit = linkData
+            .exit()
+            .remove();
+
+        allLinks = linkEnter.merge(linkData);
+
+        simulation
+            .nodes(nodes)
+            .on("tick", ticked);
+
+        simulation
+            .force("link")
+            .links(links);
+
+    }
+
+    function ticked() {
+        allLinks
+            .attr("x1", function (d) {
+                return d.source.x;
+            })
+            .attr("y1", function (d) {
+                return d.source.y;
+            })
+            .attr("x2", function (d) {
+                return d.target.x;
+            })
+            .attr("y2", function (d) {
+                return d.target.y;
+            });
+
+        allCircleNodes.selectAll("circle")
+            .attr("r", function (d) {
+                var minR = 5,
+                    multiplier = 1.5,
+                    depth = d.depth + 1;
+
+                var r = depth > minR ? minR : (minR + depth);
+
+                return r * multiplier;
+            })
+            .attr("cx", function (d) {
+                return d.x;
+            })
+            .attr("cy", function (d) {
+                return d.y;
+            });
+
+
+        allCircleNodes.selectAll("text")
+            .attr("dx", function (d) {
+                return d.x
+            })
+            .attr("dy", function (d) {
+                return d.y;
+            });
+
+
+        allRectNodes.selectAll("rect")
+            .attr("width", function (d) {
+                return 50;
+            })
+            .attr("height", function (d) {
+                return 30;
+            })
+            .attr("x", function (d) {
+                return d.x;
+            })
+            .attr("y", function (d) {
+                return d.y;
+            });
+
+        allRectNodes.selectAll("text")
+            .attr("dx", function (d) {
+                return d.x
+            })
+            .attr("dy", function (d) {
+                return d.y;
+            });
+
+    }
+
+    function handleClick(d) {
+        if (d.children) {
+            d._children = d.children;
+            //recursiveShowHideText(d, 0);
+            d.children = null;
+        } else {
+            d.children = d._children;
+            //recursiveShowHideText(d, 1);
+            d._children = null;
+        }
+        update();
+
+    }
+
+    function color(d) {
+        return d._children ? "#3bbd37" : d.children ? "#c6dbef" : "#fd8d3c";
+    }
+
+    function caption(d) {
+        return d.data.name;
+    }
+
+    function dragStarted(d) {
+        if (!d3.event.active) {
+            simulation.alphaTarget(0.3).restart();
+        }
+        d.fx = d.x;
+        d.fy = d.y;
+    }
+
+    function dragged(d) {
+        d.fx = d3.event.x;
+        d.fy = d3.event.y;
+    }
+
+    function dragEnded(d) {
+        if (!d3.event.active) {
+            simulation.alphaTarget(0);
+        }
+        d.fx = null;
+        d.fy = null;
+    }
+
+    function recursiveShowHideText(d, opacity) {
+        if (!d.children) return;
+
+        d3.selectAll(d.children).each(function () {
+            recursiveShowHideText(this, opacity);
+            var textId = "#" + this.data.name;
+            d3.selectAll(textId).style("opacity", opacity);
+        });
+
+    }
+</script>
+</body>
+</html>
